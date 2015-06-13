@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//ibatis.apache.org//DTD Mapper 3.0//EN"      
+ "http://ibatis.apache.org/dtd/ibatis-3-mapper.dtd">
+ <!-- BillItemDao -->
+<mapper namespace="com.ct.dao.BillDao">   
+    <select id="findPage"	parameterType="com.ct.entity.page.Page" resultMap="BillMap">
+		select *from(
+        	select x.*,ROWNUM r from (
+        		select b.* from Bill b join  account a on  b.account_id=a.account_id 
+        			<where>
+            			<!-- 年月份条件-->
+            
+            			<if test="year == null or year == 0">
+            				and 1=1
+            			</if>
+            			<if test="year != null and year != 0 and (month == null or month == 0)">
+               				and b.bill_month like #{year}%
+            			</if>
+                
+            			<if test="year != null and year != 0 and month != null and month != 0 and month &lt; 10" >
+                			and b.bill_month=#{year}0#{month}
+            			</if>
+            			<if test="year != null and year != 0 and month != null and month != 0 and month &gt; 10">       
+                			and b.bill_month=#{year}#{month}
+            			</if>           
+            			<!-- 身份证条件-->
+						<if test="idcard_no != null &amp;&amp; idcard_no.length()>0">
+			    			and a.idcard_no like %#{idcard_no}%
+						</if>
+						<!-- 账务账号条件-->
+						<if test="login_name!= null &amp;&amp; login_name.length()>0">
+			    			and a.login_name like %#{loginName}%
+						</if>
+						<!-- 真实姓名条件-->
+						<if test="real_name != null &amp;&amp; real_name.length()>0"	>
+			    			and  a.real_name like %#{real_name}%
+						</if>
+					</where>
+ 				) x
+		) where r&lt;#{end} and r>#{begin}   	    
+    </select>
+    <select id="selectBillItemByBillId" parameterType="int" resultType="com.ct.entity.BillItem">
+		select * from bill_item where bill_id=#{bill_id}
+		
+	</select>
+	<select id="selectAccount" parameterType="int" resultType="com.ct.entity.Account">
+	    select * from account a where a.account_id=#{account_id}
+	</select>
+	<resultMap id="BillMap" type="com.ct.entity.Bill">
+		<id column="bill_id" property="bill_id" />
+		<association property="account" javaType="com.ct.entity.Account" column="account_id" select="selectAccount"/>
+		<!--
+		<collection ofType="com.ct.entity.BillItem"
+			property="billItems" javaType="java.util.ArrayList"
+			column="bill_id" select="selectBillItemByBillId">
+		</collection>
+		-->
+	</resultMap>
+	
+    <select id="totalPages" parameterType="com.ct.entity.page.Page" resultType="int">
+        select count(b.bill_id) from Bill b join account a on b.account_id=a.account_id 
+        <where>
+            <!-- 年月份条件-->
+            <if test="year == null or year == 0">
+            	and 1=1
+            </if>
+           <if test="year != null and year != 0 and (month == null or month == 0)">
+                and b.bill_month like #{year}%
+            </if>
+                
+            <if test="year != null and year != 0 and month != null and month != 0 and month &lt; 10" >
+                and b.bill_month=#{year}0#{month}
+            </if>
+            <if test="year != null and year != 0 and month != null and month != 0 and month &gt; 10">       
+                and b.bill_month=#{year}#{month}
+            </if>   
+            <!-- 身份证条件-->
+			<if test="idcard_no != null &amp;&amp; idcard_no.length()>0">
+			    and a.idcard_no like '%'||#{idcard_no}||'%'
+			</if>
+			<!-- 账务账号条件-->
+			<if test="login_name!= null &amp;&amp; login_name.length()>0">
+			    and a.login_name like '%'||#{login_name}||'%'
+			</if>
+			<!-- 真实姓名条件-->
+			<if test="real_name != null &amp;&amp; real_name.length()>0"	>
+			    and  a.real_name like #{real_name}||'%'
+			</if>
+		</where>    	    
+	</select> 
+	<select id="findId" parameterType="int" resultMap="BillMap">
+	    select b.* from bill b join account a on b.account_id=a.account_id  where b.bill_id=#{bill_id} 
+	</select>
+	
+	<!-- BillItem -->
+	<select id="findBillItemPage" parameterType="int" resultMap="BillItemMap">
+	    select bi.*,c.name costname from bill_item bi join service s ON s.service_id=bi.service_id JOIN bill b ON b.bill_id=bi.bill_id ,cost c where s.cost_id=c.cost_id and b.bill_id=#{bill_id}
+	</select>
+	<select id="selectService" parameterType="int" resultType="com.ct.entity.Service">
+	    select * from service s where service_id=#{service_id}
+	</select>
+	<resultMap id="BillItemMap" type="com.ct.entity.BillItem">
+		<id column="item_id" property="item_id" />
+		<association property="service" javaType="com.ct.entity.Service" column="service_id" select="selectService"/>
+	</resultMap>
+	
+	
+	<select id="totalBillItemPage" parameterType="com.ct.entity.page.Page" resultType="int">
+  	    select count(b.bill_id) from bill_item b left join bill a ON a.bill_id=b.bill_id where a.bill_id=#{bill_id}
+	</select>
+	<select id="duraction" parameterType="com.ct.entity.page.Page" resultType="int">
+	    select sum(sd.duration) from service_detail sd join service s ON s.service_id=sd.service_id where s.service_id=#{service_id} and to_char(sd.logout_time,'yyyymm')=#{monthh}    
+	</select>
+	
+</mapper>
+

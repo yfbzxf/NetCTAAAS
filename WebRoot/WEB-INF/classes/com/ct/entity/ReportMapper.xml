@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//ibatis.apache.org//DTD Mapper 3.0//EN"      
+ "http://ibatis.apache.org/dtd/ibatis-3-mapper.dtd">
+
+<mapper namespace="com.ct.dao.ReportDao">
+    <select id="findHostPage" parameterType="com.ct.entity.page.Page" resultType="com.ct.entity.ReportCostUsed">
+  		select h.id host,
+  		(select count(*) from service s join cost c ON c.cost_id=s.cost_id	where c.cost_type=0 and s.unix_host=h.id) monthlycount,
+  		(select count(*) from service s join cost c ON c.cost_id=s.cost_id where c.cost_type=1 and s.unix_host=h.id) packagecount,
+		(select count(*) from service s join cost c ON c.cost_id=s.cost_id  where c.cost_type=2 and s.unix_host=h.id) timebasedcount from host h
+        
+    </select>
+    
+    <select id="totalRowsHost" parameterType="com.ct.entity.page.Page" resultType="int">
+    	select count(id)  from host
+    </select>
+    
+    <select id="findAllHost"  resultType="String">
+    	select id from host
+    </select>
+    
+    <select id="findSumDurationPage" parameterType="com.ct.entity.page.Page" resultType="com.ct.entity.ReportSumDuration">
+    	select* FROM (SELECT x.* ,ROWNUM r from(select max(a.account_id) account_id, max(a.login_name) login_name, max(a.real_name) real_name, max(a.idcard_no) idcard_no, max(a.telephone) telephone,
+            max(to_char(sd.logout_time,'yyyymm')) month, sum(sd.duration) duration from service_detail sd ,service s,account a WHERE sd.service_id=s.service_id AND s.account_id=a.account_id   group by a.account_id, to_char(sd.logout_time,'yyyymm') 
+             order by a.account_id, to_char(sd.logout_time,'yyyymm'))x)
+              where r&lt;#{end} and r>#{begin}
+    </select>
+    
+    <select id="totalRowsSumDuration" parameterType="com.ct.entity.page.Page" resultType="int">
+    	select count( sum(sd.duration)) 
+				from service_detail sd left join service s 
+				on sd.service_id = s.service_id 
+				left join account a 
+				on a.account_id = s.account_id 
+				group by a.account_id, to_char(sd.logout_time,'yyyymm')
+
+    </select>
+    
+    <select id="findThreeDuration" parameterType="String" resultType="com.ct.entity.ReportSumDuration">
+    	
+		select max(s.unix_host) unixHost,max(a.login_name) login_name,max(a.real_name) real_name,max(a.idcard_no) idcard_no,sum(sd.duration) duration from
+            service_detail sd left JOIN service s ON s.service_id=sd.service_id left join account a ON a.account_id=sd.service_id
+            where s.unix_host=#{host} group by s.service_id order by sum(sd.duration) desc
+    </select>
+</mapper>
